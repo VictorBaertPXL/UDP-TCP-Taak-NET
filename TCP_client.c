@@ -23,20 +23,42 @@ int main() {
     inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr);
 
     // Verbind met server
-    connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr));
+    if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+        perror("Connect mislukt");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
 
-    // Vraag gebruiker om input
-    printf("Raad het getal (tussen 1 en 100): ");
-    scanf("%d", &gok);
+    while (1) {
+        // Vraag gebruiker om input
+        printf("Raad het getal (tussen 1 en 100): ");
+        if (scanf("%d", &gok) != 1) {
+            printf("Ongeldige invoer.\n");
+            // Clear stdin buffer
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF) {}
+            continue;
+        }
 
-    // Stuur gok naar server
-    sprintf(buffer, "%d", gok);
-    send(sockfd, buffer, strlen(buffer), 0);
+        // Stuur gok naar server
+        sprintf(buffer, "%d", gok);
+        send(sockfd, buffer, strlen(buffer), 0);
 
-    // Ontvang antwoord van server
-    memset(buffer, 0, sizeof(buffer));
-    recv(sockfd, buffer, sizeof(buffer), 0);
-    printf("Antwoord van server: %s\n", buffer);
+        // Ontvang antwoord van server
+        memset(buffer, 0, sizeof(buffer));
+        ssize_t received = recv(sockfd, buffer, sizeof(buffer)-1, 0);
+        if (received <= 0) {
+            printf("Verbinding verloren met server.\n");
+            break;
+        }
+        buffer[received] = '\0';
+        printf("Antwoord van server: %s\n", buffer);
+
+        if (strstr(buffer, "Perfect!") != NULL) {
+            // Correct geraden, stop met raden
+            break;
+        }
+    }
 
     close(sockfd);
     return 0;
