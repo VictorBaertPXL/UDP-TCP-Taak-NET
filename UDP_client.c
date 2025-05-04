@@ -4,15 +4,14 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
-#define SERVER_IP "127.0.0.1"
-#define PORT 12345
-#define MAXBUF 1024
+#define PORT 8080
+#define BUFFER_SIZE 1024
 
 int main() {
     int sockfd;
-    struct sockaddr_in servaddr;
-    char buffer[MAXBUF];
-    char input[16];
+    struct sockaddr_in server_addr;
+    char buffer[BUFFER_SIZE];
+    int guess;
 
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
@@ -20,36 +19,38 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    memset(&servaddr, 0, sizeof(servaddr));
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server_addr.sin_port = htons(PORT);
 
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_port = htons(PORT);
-    inet_pton(AF_INET, SERVER_IP, &servaddr.sin_addr);
+    printf("Enter your guess (0 - 99): ");
+    scanf("%d", &guess);
 
-    while (1) {
-        // Send guess
-        printf("Enter your guess (0-99): ");
-        fgets(input, sizeof(input), stdin);
-        input[strcspn(input, "\n")] = 0;
+    // Stuur de gok naar de server
+    sendto(sockfd, &guess, sizeof(int), 0,
+           (const struct sockaddr *)&server_addr, sizeof(server_addr));
 
-        sendto(sockfd, input, strlen(input), 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+    // Wacht maximaal 8 seconden op antwoord
+    fd_set readfds;
+    struct timeval tv;
+    tv.tv_sec = 8;
+    tv.tv_usec = 0;
+    FD_ZERO(&readfds);
+    FD_SET(sockfd, &readfds);
 
-        // Set timeout
-        struct timeval tv = {2, 0}; // 2 seconds timeout
-        setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    printf("Waiting for result...\n");
 
-        int len = sizeof(servaddr);
-        int n = recvfrom(sockfd, buffer, MAXBUF, 0, (struct sockaddr *)&servaddr, &len);
-
-        if (n < 0) {
-            printf("No response from server. Try again.\n");
-        } else {
+    if (select(sockfd + 1, &readfds, NULL, NULL, &tv) > 0) {
+        int n = recvfrom(sockfd, buffer, BUFFER_SIZE - 1, 0, NULL, NULL);
+        if (n >= 0) {
             buffer[n] = '\0';
-            printf("%s\n", buffer);
-            if (strcmp(buffer, "You won!") == 0) {
-                break; // Stop als de client wint
-            }
+            printf("Server: %s\n", buffer);
+        } else {
+            perror("recvfrom failed");
         }
+    } else {
+        printf("No response from server. Exiting.\n");
     }
 
     close(sockfd);
