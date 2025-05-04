@@ -6,9 +6,7 @@
 #include <time.h>
 #include <math.h>
 
-#define PORT 8080
-#define BUFFER_SIZE 1024
-#define MAX_CLIENTS 100  // genoeg voor veel clients
+
 
 typedef struct {
     struct sockaddr_in addr;
@@ -16,6 +14,11 @@ typedef struct {
 } ClientGuess;
 
 int main() {
+    int PORT = 8080;
+    int BUFFER_SIZE = 1024;
+    int MAX_CLIENTS = 100  ;
+
+
     int sockfd;
     struct sockaddr_in server_addr, client_addr;
     socklen_t addr_len;
