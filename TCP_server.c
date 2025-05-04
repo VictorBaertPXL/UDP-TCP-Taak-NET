@@ -79,13 +79,16 @@ int main() {
             send(client_fd, antwoord, strlen(antwoord), 0);
             break; // juiste gok, stop de loop
         }
+        else if (gok < geheim_getal)
+        {
+            antwoord = "Hoger.";
+        }
         else
         {
-            int verschil = abs(geheim_getal - gok);
-            sprintf(buffer, "Niet juist. Je zat er %d vanaf.", verschil);
-            antwoord = buffer;
-            send(client_fd, antwoord, strlen(antwoord), 0);
+            antwoord = "Lager.";
         }
+
+        send(client_fd, antwoord, strlen(antwoord), 0);
     }
 
     close(client_fd);
