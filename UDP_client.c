@@ -26,25 +26,30 @@ int main() {
     servaddr.sin_port = htons(PORT);
     inet_pton(AF_INET, SERVER_IP, &servaddr.sin_addr);
 
-    // Send guess
-    printf("Enter your guess (0-99): ");
-    fgets(input, sizeof(input), stdin);
-    input[strcspn(input, "\n")] = 0;
+    while (1) {
+        // Send guess
+        printf("Enter your guess (0-99): ");
+        fgets(input, sizeof(input), stdin);
+        input[strcspn(input, "\n")] = 0;
 
-    sendto(sockfd, input, strlen(input), 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+        sendto(sockfd, input, strlen(input), 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
 
-    // Set timeout
-    struct timeval tv = {16, 0};
-    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+        // Set timeout
+        struct timeval tv = {2, 0}; // 2 seconds timeout
+        setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-    int len = sizeof(servaddr);
-    int n = recvfrom(sockfd, buffer, MAXBUF, 0, (struct sockaddr *)&servaddr, &len);
+        int len = sizeof(servaddr);
+        int n = recvfrom(sockfd, buffer, MAXBUF, 0, (struct sockaddr *)&servaddr, &len);
 
-    if (n < 0) {
-        printf("You lost ?\n");
-    } else {
-        buffer[n] = '\0';
-        printf("%s\n", buffer);
+        if (n < 0) {
+            printf("No response from server. Try again.\n");
+        } else {
+            buffer[n] = '\0';
+            printf("%s\n", buffer);
+            if (strcmp(buffer, "You won!") == 0) {
+                break; // Stop als de client wint
+            }
+        }
     }
 
     close(sockfd);

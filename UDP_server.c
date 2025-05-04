@@ -7,8 +7,6 @@
 
 #define PORT 12345
 #define MAXBUF 1024
-#define TIMEOUT_INITIAL 8
-#define TIMEOUT_FINAL 16
 
 int main() {
     int sockfd;
@@ -42,15 +40,14 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    // Set timeout for receiving
-    struct timeval tv = {TIMEOUT_INITIAL, 0};
-    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-
     printf("Waiting for guesses...\n");
 
     while (1) {
         int n = recvfrom(sockfd, buffer, MAXBUF, 0, (struct sockaddr *)&client_addr, &len);
-        if (n < 0) break;
+        if (n < 0) {
+            perror("recvfrom error or timeout");
+            break;
+        }
 
         buffer[n] = '\0';
         int guess = atoi(buffer);
@@ -62,25 +59,23 @@ int main() {
             inet_ntop(AF_INET, &client_addr.sin_addr, winner_ip, INET_ADDRSTRLEN);
         }
 
-        printf("Received %d from %s\n", guess, inet_ntoa(client_addr.sin_addr));
+        printf("Received guess %d from %s\n", guess, inet_ntoa(client_addr.sin_addr));
+
+        if (guess == target) {
+            // Winnaar gevonden, stuur feedback terug
+            char message[64];
+            snprintf(message, sizeof(message), "You won!");
+            sendto(sockfd, message, strlen(message), 0, (struct sockaddr *)&client_addr, len);
+            printf("Winner is %s with guess %d\n", winner_ip, closest_guess);
+            break;
+        } else {
+            // Feedback sturen dat het niet juist is met verschil
+            char feedback[64];
+            snprintf(feedback, sizeof(feedback), "Not correct, you missed by %d.", diff);
+            sendto(sockfd, feedback, strlen(feedback), 0, (struct sockaddr *)&client_addr, len);
+        }
     }
 
-    // Final timeout period
-    tv.tv_sec = TIMEOUT_FINAL;
-    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-
-    while (1) {
-        int n = recvfrom(sockfd, buffer, MAXBUF, 0, (struct sockaddr *)&client_addr, &len);
-        if (n < 0) break;
-    }
-
-    // Send result to clients
-    char message[64];
-    snprintf(message, sizeof(message), "You won !");
-    inet_pton(AF_INET, winner_ip, &client_addr.sin_addr);
-    sendto(sockfd, message, strlen(message), 0, (struct sockaddr *)&client_addr, len);
-
-    printf("Winner is %s with guess %d (target was %d)\n", winner_ip, closest_guess, target);
     close(sockfd);
     return 0;
 }
