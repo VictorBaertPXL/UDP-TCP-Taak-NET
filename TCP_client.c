@@ -31,7 +31,7 @@ int main() {
 
     while (1) {
         // Vraag gebruiker om input
-        printf("Raad het getal (tussen 1 en 1 000 000): ");
+        printf("Raad het getal (tussen 1 en 100): ");
         if (scanf("%d", &gok) != 1) {
             printf("Ongeldige invoer.\n");
             // Clear stdin buffer

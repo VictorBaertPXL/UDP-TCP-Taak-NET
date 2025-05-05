@@ -56,7 +56,7 @@ int main() {
 
     // Genereer geheim getal
     srand(time(NULL));
-    geheim_getal = rand() % 1000000 + 1;
+    geheim_getal = rand() % 100 + 1;
     printf("Geheim getal: %d\n", geheim_getal);
 
     while (1)
